@@ -2,212 +2,277 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ポップ脳トレ！めくり記憶ゲーム</title>
-    <!-- Tailwind CSS (デザイン用) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GUN DUEL 3D 1v1: ハイパーガンファイト</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=MURECHO:wght@400;700;900&display=swap" rel="stylesheet">
-    <!-- FontAwesome (アイコン用) -->
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@700;900&family=MURECHO:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Three.js for 3D Graphics -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <style>
         body {
             font-family: 'MURECHO', sans-serif;
-            background: linear-gradient(135deg, #FF9A9E 0%, #FECFEF 99%, #FECFEF 100%);
+            background: #0f172a;
+            color: #f8fafc;
             min-height: 100vh;
+            user-select: none;
+            touch-action: manipulation;
+            overflow: hidden;
         }
-        .font-pop {
-            font-family: 'Fredoka One', cursive;
+        .font-cyber {
+            font-family: 'Chakra Petch', sans-serif;
         }
-        /* カードのアニメーション（3D Flip Effect） */
-        .card-container {
-            perspective: 1000px;
+        canvas {
+            touch-action: none;
         }
-        .card-inner {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            text-align: center;
-            transition: transform 0.5s;
-            transform-style: preserve-3d;
+        .shake-screen {
+            animation: shake 0.2s ease-in-out;
         }
-        .card.flipped .card-inner {
-            transform: rotateY(180deg);
+        @keyframes shake {
+            0%, 100% { transform: translate(0, 0); }
+            20% { transform: translate(-8px, 5px); }
+            40% { transform: translate(8px, -5px); }
+            60% { transform: translate(-5px, 8px); }
+            80% { transform: translate(5px, -8px); }
         }
-        .card-front, .card-back {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            -webkit-backface-visibility: hidden;
-            backface-visibility: hidden;
-            border-radius: 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+        .glow-neon-cyan {
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.4);
         }
-        .card-front {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-            cursor: pointer;
-            border: 3px solid #ffffff;
+        .glow-neon-rose {
+            box-shadow: 0 0 20px rgba(244, 63, 94, 0.4);
         }
-        .card-front:hover {
-            transform: scale(1.03);
-            transition: transform 0.2s;
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
-        .card-back {
-            background-color: #ffffff;
-            transform: rotateY(180deg);
-            border: 3px solid #FF8E53;
-        }
-        .card.matched .card-back {
-            background-color: #E8F5E9;
-            border-color: #4CAF50;
-            animation: pulse 0.5s ease-in-out;
-        }
-        @keyframes pulse {
-            0% { transform: rotateY(180deg) scale(1); }
-            50% { transform: rotateY(180deg) scale(1.1); }
-            100% { transform: rotateY(180deg) scale(1); }
+        #canvas-container {
+            cursor: crosshair;
         }
     </style>
 </head>
-<body class="p-3 md:p-6 text-gray-800">
+<body class="relative h-screen w-screen flex flex-col justify-between p-2 sm:p-4 overflow-hidden bg-slate-950">
 
-    <div class="max-w-4xl mx-auto bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl p-4 md:p-8 border-4 border-white">
-        <!-- ヘッダーエリア -->
-        <header class="flex flex-col md:flex-row justify-between items-center pb-6 border-b-2 border-pink-100 gap-4">
-            <div class="text-center md:text-left">
-                <h1 class="text-3xl md:text-4xl font-black text-pink-500 tracking-wider flex items-center justify-center md:justify-start gap-2">
-                    <i class="fa-solid fa-brain text-yellow-400 animate-bounce"></i> Pop! 記憶カードゲーム
-                </h1>
-                <p class="text-xs md:text-sm text-gray-500 font-bold mt-1">同じイラストを見つけてペアを作ろう！スコアは自動保存！</p>
+    <div class="max-w-7xl mx-auto w-full h-full flex flex-col gap-2 relative z-10">
+        
+        <!-- Header Section -->
+        <header id="app-header" class="flex justify-between items-center glass-panel px-4 py-2 rounded-2xl transition-all duration-300 border border-cyan-500/30">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 via-emerald-400 to-indigo-500 flex items-center justify-center text-xl shadow-lg font-bold border border-cyan-300/40">
+                    🤠
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-200 to-indigo-400 font-cyber tracking-wider drop-shadow">
+                        GUN DUEL 3D <span class="text-xs text-cyan-300 font-bold px-2.5 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/40">PRO ARENA</span>
+                    </h1>
+                </div>
             </div>
 
-            <!-- ユーザー情報 & ログインボタン -->
-            <div id="auth-section" class="flex items-center gap-3 bg-pink-50 p-3 rounded-2xl border border-pink-200">
-                <div id="user-info" class="hidden flex items-center gap-3">
-                    <img id="user-avatar" src="" alt="Avatar" class="w-10 h-10 rounded-full border-2 border-pink-400">
-                    <div class="text-left">
-                        <div id="user-name" class="font-bold text-sm text-gray-800 leading-tight"></div>
-                        <button id="logout-btn" class="text-xs text-pink-600 hover:underline font-bold mt-1">ログアウト</button>
-                    </div>
+            <!-- Mode & Sound controls -->
+            <div class="flex items-center gap-2">
+                <div class="hidden sm:flex items-center gap-1.5 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-700/80 text-xs font-bold shadow-inner">
+                    <span class="text-slate-400">AI LEVEL:</span>
+                    <select id="ai-level-select" class="bg-slate-800 text-cyan-400 font-bold rounded-lg px-2 py-0.5 focus:outline-none border border-cyan-500/30">
+                        <option value="easy">ルーキー (初級)</option>
+                        <option value="medium" selected>ベテラン (中級)</option>
+                        <option value="hard">スナイパー (鬼強)</option>
+                    </select>
                 </div>
-                <button id="login-btn" class="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white font-bold px-4 py-2.5 rounded-xl shadow-lg hover:shadow-xl transition flex items-center gap-2 text-sm">
-                    <i class="fa-brands fa-google text-lg"></i> Googleでログイン
+
+                <button id="sound-btn" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 font-bold p-2.5 rounded-xl border border-slate-700 transition">
+                    <i id="sound-icon" class="fa-solid fa-volume-high text-cyan-400"></i>
                 </button>
-            </div>
-        </header>
 
-        <!-- メインコンテンツ -->
-        <main class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            <!-- ゲームメインエリア (2カラム分) -->
-            <div class="lg:col-span-2 flex flex-col items-center">
-                
-                <!-- ログイン必須警告アナウンス -->
-                <div id="login-notice" class="w-full bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-3 rounded-r-xl mb-4 text-xs font-bold flex items-center gap-2">
-                    <i class="fa-solid fa-triangle-exclamation text-yellow-500 text-base"></i>
-                    <span>ログインするとクリア記録が自動保存され、ランキングに登録されます！</span>
-                </div>
-
-                <!-- ステータスバー -->
-                <div class="w-full bg-pink-100/80 rounded-2xl p-4 mb-6 flex justify-around items-center text-gray-700 shadow-inner">
-                    <div class="text-center">
-                        <span class="block text-xs font-bold text-gray-500 uppercase">経過時間</span>
-                        <span id="timer" class="font-pop text-2xl md:text-3xl text-pink-600">0s</span>
+                <!-- Authentication -->
+                <div id="auth-container" class="flex items-center bg-slate-800/80 p-1 rounded-xl border border-slate-700">
+                    <div id="user-profile" class="hidden flex items-center gap-2 px-1">
+                        <img id="user-avatar" src="" alt="Avatar" class="w-7 h-7 rounded-full border border-cyan-400 shadow">
+                        <span id="user-display-name" class="font-bold text-xs text-slate-200 hidden md:inline"></span>
+                        <button id="logout-btn" class="text-[10px] text-rose-400 hover:underline font-bold px-1">退出</button>
                     </div>
-                    <div class="h-8 w-0.5 bg-pink-200"></div>
-                    <div class="text-center">
-                        <span class="block text-xs font-bold text-gray-500 uppercase">めくった回数</span>
-                        <span id="moves" class="font-pop text-2xl md:text-3xl text-purple-600">0</span>
-                    </div>
-                    <div class="h-8 w-0.5 bg-pink-200"></div>
-                    <div class="text-center">
-                        <span class="block text-xs font-bold text-gray-500 uppercase">マッチペア</span>
-                        <span id="matches" class="font-pop text-2xl md:text-3xl text-emerald-600">0 / 6</span>
-                    </div>
-                </div>
-
-                <!-- ゲーム盤面 (4x3 グリッド) -->
-                <div id="game-board" class="grid grid-cols-3 sm:grid-cols-4 gap-3 w-full max-w-md aspect-[4/3] p-2 bg-pink-50/50 rounded-2xl border-2 border-pink-100">
-                    <!-- JavaScriptで動的にカードを生成 -->
-                </div>
-
-                <!-- コントロールボタン -->
-                <div class="mt-6 flex gap-4 w-full justify-center">
-                    <button id="start-btn" class="w-full max-w-xs bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-500 hover:to-teal-600 text-white font-black text-lg py-3 px-6 rounded-2xl shadow-lg transform active:scale-95 transition flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-play"></i> ゲームスタート！
+                    <button id="login-btn" class="bg-gradient-to-r from-cyan-600 to-indigo-600 hover:brightness-110 text-white font-bold px-3 py-1.5 rounded-lg transition text-xs flex items-center gap-1.5 shadow-md">
+                        <i class="fa-brands fa-google"></i> ログイン
                     </button>
                 </div>
             </div>
+        </header>
 
-            <!-- サイドバー：記録・ランキング (1カラム分) -->
-            <div class="flex flex-col gap-6">
-                
-                <!-- 自分の過去記録 -->
-                <div class="bg-pink-50/60 p-5 rounded-2xl border border-pink-100 shadow-sm">
-                    <h2 class="font-bold text-lg text-gray-800 flex items-center gap-2 mb-3">
-                        <i class="fa-solid fa-user-check text-pink-500"></i> あなたのベスト記録
-                    </h2>
-                    <div id="my-best-score" class="text-center p-3 bg-white rounded-xl shadow-inner border border-pink-100">
-                        <p class="text-xs text-gray-400 font-bold">ログインするとベストスコアが表示されます</p>
+        <!-- Main Game Container -->
+        <main id="main-game-area" class="flex-1 relative flex flex-col min-h-0">
+            
+            <!-- In-Game HUD -->
+            <div class="absolute top-3 left-3 right-3 z-20 flex justify-between items-center pointer-events-none">
+                <!-- P1 HUD -->
+                <div class="flex items-center gap-3 bg-slate-950/85 backdrop-blur-md p-2.5 px-4 rounded-2xl border border-cyan-400/50 glow-neon-cyan pointer-events-auto">
+                    <div class="text-3xl">🤠</div>
+                    <div>
+                        <div id="p1-name" class="text-cyan-300 text-xs font-black font-cyber tracking-wider flex items-center gap-1">
+                            YOU (P1) <span class="text-[10px] text-emerald-400 font-normal">[PLAYER]</span>
+                        </div>
+                        <div class="w-32 sm:w-52 bg-slate-900 h-4 rounded-full overflow-hidden border border-slate-700/80 relative mt-1 p-0.5 shadow-inner">
+                            <div id="p1-hp-bar" class="bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-500 h-full w-full rounded-full transition-all duration-150 shadow"></div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- 全体ランキング -->
-                <div class="bg-amber-50/60 p-5 rounded-2xl border border-amber-100 shadow-sm flex-1">
-                    <h2 class="font-bold text-lg text-gray-800 flex items-center gap-2 mb-3">
-                        <i class="fa-solid fa-trophy text-amber-500"></i> ハイスコアランキング
-                    </h2>
-                    <div id="ranking-list" class="space-y-2 max-h-60 overflow-y-auto pr-1">
-                        <p class="text-xs text-gray-400 text-center py-4">読み込み中...</p>
+                <!-- Center Match Banner -->
+                <div id="center-status" class="bg-slate-950/90 backdrop-blur-md border border-cyan-500/30 px-5 py-2 rounded-2xl text-center hidden sm:block shadow-lg">
+                    <div class="text-[9px] text-cyan-400 font-bold uppercase tracking-widest">PRO 3D BATTLE ARENA</div>
+                    <div id="game-status-text" class="text-xs font-cyber text-amber-300 font-black">準備完了</div>
+                </div>
+
+                <!-- P2 HUD -->
+                <div class="flex items-center gap-3 bg-slate-950/85 backdrop-blur-md p-2.5 px-4 rounded-2xl border border-rose-500/50 glow-neon-rose flex-row-reverse text-right pointer-events-auto">
+                    <div class="text-3xl">🤖</div>
+                    <div>
+                        <div id="p2-name" class="text-rose-400 text-xs font-black font-cyber tracking-wider flex items-center gap-1 justify-end">
+                            <span class="text-[10px] text-rose-300 font-normal">[BOT]</span> RIVAL
+                        </div>
+                        <div class="w-32 sm:w-52 bg-slate-900 h-4 rounded-full overflow-hidden border border-slate-700/80 relative mt-1 p-0.5 shadow-inner">
+                            <div id="p2-hp-bar" class="bg-gradient-to-r from-rose-500 via-red-500 to-pink-500 h-full w-full rounded-full transition-all duration-150 shadow"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Expanded 3D Canvas Arena -->
+            <div id="canvas-container" class="relative w-full h-full flex-1 rounded-3xl bg-slate-950 border-2 border-slate-800/80 shadow-2xl overflow-hidden">
+                <!-- ThreeJS Canvas will append here -->
+
+                <!-- Countdown Overlay -->
+                <div id="countdown-overlay" class="absolute inset-0 bg-slate-950/75 backdrop-blur-md flex items-center justify-center hidden z-30 pointer-events-none">
+                    <div id="countdown-text" class="text-9xl font-black font-cyber text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-amber-300 to-indigo-400 animate-pulse drop-shadow-lg">
+                        3
                     </div>
                 </div>
 
+                <!-- Ammo & Aim Controls HUD Overlay -->
+                <div class="absolute bottom-4 left-4 bg-slate-950/90 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-cyan-500/40 text-xs font-bold text-slate-200 flex items-center gap-4 z-20 shadow-lg">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-crosshairs text-cyan-400 text-base animate-spin" style="animation-duration: 8s;"></i>
+                        <span class="text-cyan-400">AMMO:</span>
+                        <span id="ammo-count" class="font-cyber text-cyan-200 text-xl font-black tracking-widest">30 / 30</span>
+                    </div>
+                    <span id="reload-indicator" class="text-xs text-amber-400 font-black hidden animate-pulse bg-amber-500/10 px-2 py-1 rounded-lg border border-amber-500/30">RELOADING...</span>
+                </div>
+
+                <!-- Start Lobby & Loadout Overlay -->
+                <div id="start-overlay" class="absolute inset-0 bg-slate-950/95 backdrop-blur-lg flex flex-col items-center justify-center p-4 text-center z-40 overflow-y-auto">
+                    <div class="max-w-md w-full flex flex-col items-center gap-4 py-2">
+                        <div class="w-20 h-20 rounded-3xl bg-gradient-to-tr from-cyan-400 via-emerald-400 to-indigo-500 flex items-center justify-center text-4xl shadow-2xl animate-bounce border border-white/20">
+                            🎯
+                        </div>
+                        
+                        <div>
+                            <h2 class="text-3xl sm:text-4xl font-black font-cyber text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-teal-200 to-indigo-400 tracking-wider">
+                                GUN DUEL 3D PRO
+                            </h2>
+                            <p class="text-xs text-slate-300 mt-1.5 font-bold">広大な3Dマップ！レーザー照準器で敵を正確に狙い撃て！</p>
+                        </div>
+
+                        <!-- Loadout selection -->
+                        <div class="w-full bg-slate-900/90 p-3.5 rounded-2xl border border-slate-700/80 text-left shadow-xl">
+                            <div class="text-xs font-bold text-cyan-400 mb-2.5 flex items-center gap-1.5">
+                                <i class="fa-solid fa-gun"></i> 武器タイプを選択:
+                            </div>
+                            <div class="grid grid-cols-3 gap-2.5">
+                                <button data-weapon="assault" class="weapon-select-btn bg-cyan-500/20 border-2 border-cyan-400 rounded-2xl p-3 text-center transition hover:scale-105">
+                                    <div class="text-2xl">🔫</div>
+                                    <div class="text-xs font-bold text-cyan-300 mt-1">アサルト</div>
+                                    <div class="text-[9px] text-slate-400">バランス・連射</div>
+                                </button>
+                                <button data-weapon="sniper" class="weapon-select-btn bg-slate-950/80 border border-slate-800 rounded-2xl p-3 text-center transition hover:bg-slate-800 hover:scale-105">
+                                    <div class="text-2xl">🎯</div>
+                                    <div class="text-xs font-bold text-amber-300 mt-1">スナイパー</div>
+                                    <div class="text-[9px] text-slate-400">一撃必殺・長距離</div>
+                                </button>
+                                <button data-weapon="shotgun" class="weapon-select-btn bg-slate-950/80 border border-slate-800 rounded-2xl p-3 text-center transition hover:bg-slate-800 hover:scale-105">
+                                    <div class="text-2xl">💥</div>
+                                    <div class="text-xs font-bold text-rose-300 mt-1">ショットガン</div>
+                                    <div class="text-[9px] text-slate-400">近距離拡散</div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Controls Tutorial -->
+                        <div class="w-full bg-slate-900/70 p-3 rounded-2xl border border-slate-800 text-xs text-slate-300 leading-relaxed text-left flex gap-3 items-center">
+                            <div class="text-3xl text-cyan-400"><i class="fa-solid fa-gamepad"></i></div>
+                            <div>
+                                <span class="font-bold text-cyan-300">【グラフィック＆照準強化！】</span><br>
+                                赤いレーザーポインターとターゲットで標準を合わせてクリック射撃！<b>WASD</b>で移動、<b>R</b>でリロード、<b>Space</b>で回避！
+                            </div>
+                        </div>
+
+                        <button id="start-btn" class="w-full bg-gradient-to-r from-cyan-400 via-teal-300 to-indigo-500 text-slate-950 font-black text-lg py-4 rounded-2xl shadow-xl hover:brightness-110 transition font-cyber tracking-wider flex items-center justify-center gap-2 border border-white/30">
+                            <i class="fa-solid fa-crosshairs text-xl"></i> 3Dバトルスタート！
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Action Controls Overlay -->
+                <div class="absolute bottom-4 right-4 flex gap-2 z-20">
+                    <button id="reload-btn" class="bg-slate-950/80 hover:bg-slate-800 border border-slate-700 text-slate-200 font-bold px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-1.5 shadow backdrop-blur transition">
+                        <i class="fa-solid fa-rotate-right text-amber-400"></i> リロード (R)
+                    </button>
+                    <button id="dodge-btn" class="bg-slate-950/80 hover:bg-slate-800 border border-slate-700 text-slate-200 font-bold px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-1.5 shadow backdrop-blur transition">
+                        <i class="fa-solid fa-person-running text-cyan-400"></i> 回避 (Space)
+                    </button>
+                </div>
             </div>
         </main>
+
+        <!-- Stats Footer -->
+        <footer class="glass-panel p-2.5 rounded-2xl flex flex-wrap justify-between items-center gap-2 text-xs">
+            <div id="my-stats-box" class="flex items-center gap-4 text-slate-300">
+                <span class="font-bold text-cyan-400"><i class="fa-solid fa-trophy"></i> 戦績:</span>
+                <span>勝率: <strong id="my-winrate" class="text-amber-400 font-cyber">0%</strong></span>
+                <span>勝利: <strong id="my-wins" class="text-emerald-400 font-cyber">0勝</strong></span>
+                <span>レート: <strong id="my-rating" class="text-cyan-300 font-cyber">1000</strong></span>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <span class="text-slate-400 font-bold"><i class="fa-solid fa-crown text-amber-400"></i> トラッカー:</span>
+                <div id="leaderboard-mini" class="flex gap-2 overflow-x-auto max-w-xs sm:max-w-md">
+                    <span class="text-slate-500">ランキング読込中...</span>
+                </div>
+            </div>
+        </footer>
+
     </div>
 
-    <!-- クリア時モーダルダイアログ -->
-    <div id="clear-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
-        <div class="bg-white rounded-3xl p-6 md:p-8 max-w-sm w-full text-center shadow-2xl border-4 border-yellow-300 transform animate-bounce-short">
-            <div class="text-6xl mb-2">🎉</div>
-            <h2 class="text-2xl font-black text-pink-500 mb-1">ステージクリア！</h2>
-            <p class="text-xs text-gray-500 font-bold mb-4">素晴らしい記憶力です！</p>
-            
-            <div class="bg-pink-50 rounded-2xl p-4 mb-4 text-left space-y-2 text-sm font-bold text-gray-700">
+    <!-- Result Modal -->
+    <div id="result-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-slate-900/95 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl border-2 border-cyan-500/40 relative">
+            <div id="modal-icon" class="text-6xl mb-2 animate-bounce">🏆</div>
+            <h2 id="modal-title" class="text-3xl font-black text-cyan-400 font-cyber mb-1">VICTORY!</h2>
+            <p id="modal-desc" class="text-xs text-slate-300 mb-4 font-bold"></p>
+
+            <div class="bg-slate-950 rounded-2xl p-3 mb-4 text-left text-xs font-bold text-slate-300 border border-slate-800 space-y-2">
                 <div class="flex justify-between">
-                    <span>クリアタイム:</span>
-                    <span id="modal-time" class="text-pink-600 font-pop">0秒</span>
+                    <span class="text-slate-400">対戦相手:</span>
+                    <span id="modal-opponent" class="text-rose-400">BOT AI (ベテラン)</span>
                 </div>
-                <div class="flex justify-between">
-                    <span>めくった回数:</span>
-                    <span id="modal-moves" class="text-purple-600 font-pop">0回</span>
-                </div>
-                <div class="flex justify-between border-t border-pink-200 pt-2 text-base">
-                    <span>総合スコア:</span>
-                    <span id="modal-score" class="text-emerald-600 font-pop text-lg">0 pt</span>
+                <div class="flex justify-between border-t border-slate-800 pt-2">
+                    <span class="text-slate-400">獲得レート:</span>
+                    <span id="modal-rating-change" class="text-emerald-400 font-cyber text-sm">+25 pt</span>
                 </div>
             </div>
 
-            <p id="save-status-msg" class="text-xs text-gray-400 mb-4 font-bold"></p>
-
-            <button id="modal-close-btn" class="w-full bg-gradient-to-r from-pink-500 to-red-500 text-white font-bold py-3 rounded-xl shadow-md hover:shadow-lg transition">
-                もう一度遊ぶ！
+            <button id="modal-retry-btn" class="w-full bg-gradient-to-r from-emerald-500 via-amber-400 to-cyan-500 text-slate-950 font-black py-3 rounded-xl shadow-lg hover:brightness-110 transition text-sm font-cyber">
+                もう一度再戦！ (RETRY)
             </button>
         </div>
     </div>
 
-    <!-- Firebase SDK Imports (v11) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, getDocs, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- 1. Firebase設定 ---
         const firebaseConfig = {
             apiKey: "AIzaSyA8wvf2oEqIT6EgjVL55x_epHm02CBXS9U",
             authDomain: "game-130a7.firebaseapp.com",
@@ -222,337 +287,862 @@
         const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        // アプリID定義 (Firestore必須ルール対応)
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'memory-game';
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'gun-duel-3d';
 
-        // --- 2. 状態管理 ---
+        // Audio System
+        let soundEnabled = true;
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function playSFX(type) {
+            if (!soundEnabled) return;
+            try {
+                if (!audioCtx) audioCtx = new AudioContext();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const now = audioCtx.currentTime;
+
+                if (type === 'shoot') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(500, now);
+                    osc.frequency.exponentialRampToValueAtTime(100, now + 0.08);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                    osc.connect(gain); gain.connect(audioCtx.destination);
+                    osc.start(now); osc.stop(now + 0.08);
+                } else if (type === 'sniper') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(1000, now);
+                    osc.frequency.exponentialRampToValueAtTime(60, now + 0.2);
+                    gain.gain.setValueAtTime(0.35, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                    osc.connect(gain); gain.connect(audioCtx.destination);
+                    osc.start(now); osc.stop(now + 0.2);
+                } else if (type === 'reload') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(500, now);
+                    osc.frequency.setValueAtTime(750, now + 0.1);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    osc.connect(gain); gain.connect(audioCtx.destination);
+                    osc.start(now); osc.stop(now + 0.15);
+                } else if (type === 'hit') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(200, now);
+                    osc.frequency.exponentialRampToValueAtTime(50, now + 0.12);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+                    osc.connect(gain); gain.connect(audioCtx.destination);
+                    osc.start(now); osc.stop(now + 0.12);
+                } else if (type === 'beep') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(750, now);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.connect(gain); gain.connect(audioCtx.destination);
+                    osc.start(now); osc.stop(now + 0.1);
+                } else if (type === 'fight') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(950, now);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.connect(gain); gain.connect(audioCtx.destination);
+                    osc.start(now); osc.stop(now + 0.3);
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        // Auth
         let currentUser = null;
-        let gameCards = [];
-        let flippedCards = [];
-        let matchedCount = 0;
-        let moveCount = 0;
-        let timerInterval = null;
-        let secondsElapsed = 0;
-        let isGameStarted = false;
-        let canFlip = true;
+        let myData = { wins: 0, matches: 0, rating: 1000 };
 
-        // カード用絵柄アイコン (6ペア = 12枚)
-        const EMOJIS = ['🍎', '🍌', '🍓', '🍇', '🐶', '🐱'];
-
-        // --- 3. DOM要素取得 ---
         const loginBtn = document.getElementById('login-btn');
         const logoutBtn = document.getElementById('logout-btn');
-        const userInfo = document.getElementById('user-info');
-        const userName = document.getElementById('user-name');
+        const userProfile = document.getElementById('user-profile');
+        const userDisplayName = document.getElementById('user-display-name');
         const userAvatar = document.getElementById('user-avatar');
-        const loginNotice = document.getElementById('login-notice');
 
-        const gameBoard = document.getElementById('game-board');
-        const startBtn = document.getElementById('start-btn');
-        const timerDisplay = document.getElementById('timer');
-        const movesDisplay = document.getElementById('moves');
-        const matchesDisplay = document.getElementById('matches');
-
-        const myBestScoreContainer = document.getElementById('my-best-score');
-        const rankingListContainer = document.getElementById('ranking-list');
-
-        const clearModal = document.getElementById('clear-modal');
-        const modalTime = document.getElementById('modal-time');
-        const modalMoves = document.getElementById('modal-moves');
-        const modalScore = document.getElementById('modal-score');
-        const modalCloseBtn = document.getElementById('modal-close-btn');
-        const saveStatusMsg = document.getElementById('save-status-msg');
-
-        // --- 4. 認証機能 (Firebase Auth) ---
-        
-        // ログイン
         loginBtn.addEventListener('click', async () => {
-            try {
-                await signInWithPopup(auth, provider);
-            } catch (error) {
-                console.error("ログインエラー:", error);
-                alert("ログインに失敗しました: " + error.message);
-            }
+            try { await signInWithPopup(auth, provider); } catch (e) { console.error(e); }
         });
-
-        // ログアウト
         logoutBtn.addEventListener('click', async () => {
-            try {
-                await signOut(auth);
-            } catch (error) {
-                console.error("ログアウトエラー:", error);
-            }
+            try { await signOut(auth); } catch (e) { console.error(e); }
         });
 
-        // 認証状態の監視
         onAuthStateChanged(auth, (user) => {
             currentUser = user;
             if (user) {
-                // ログイン時
-                userName.textContent = user.displayName || "ゲスト";
-                userAvatar.src = user.photoURL || "https://placehold.co/100x100?text=User";
-                userInfo.classList.remove('hidden');
+                userDisplayName.textContent = user.displayName || "ガンマン";
+                userAvatar.src = user.photoURL || "https://placehold.co/100x100?text=U";
+                userProfile.classList.remove('hidden');
                 loginBtn.classList.add('hidden');
-                loginNotice.classList.add('hidden');
-                
-                // 個人スコア取得
-                loadMyBestScore(user.uid);
+                syncUserData(user);
             } else {
-                // 未ログイン時
-                userInfo.classList.add('hidden');
+                userProfile.classList.add('hidden');
                 loginBtn.classList.remove('hidden');
-                loginNotice.classList.remove('hidden');
-                myBestScoreContainer.innerHTML = `<p class="text-xs text-gray-400 font-bold py-2">ログインするとベストスコアが表示されます</p>`;
             }
         });
 
-        // --- 5. データベース機能 (Firestore) ---
-
-        // 個人スコア保存 (ルールに沿ったパス: /artifacts/{appId}/users/{userId}/scores)
-        async function saveScore(scoreData) {
-            if (!currentUser) return false;
-
-            try {
-                // 個人用スコア記録
-                const userScoreRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'scores', 'best');
-                
-                // パブリックランキング用記録 (/artifacts/{appId}/public/data/leaderboard)
-                const publicLeaderboardRef = doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', currentUser.uid);
-
-                const dataToSave = {
-                    uid: currentUser.uid,
-                    userName: currentUser.displayName || "名無し",
-                    userPhoto: currentUser.photoURL || "",
-                    score: scoreData.score,
-                    time: scoreData.time,
-                    moves: scoreData.moves,
-                    updatedAt: serverTimestamp()
-                };
-
-                await setDoc(userScoreRef, dataToSave, { merge: true });
-                await setDoc(publicLeaderboardRef, dataToSave, { merge: true });
-
-                // UI更新
-                loadMyBestScore(currentUser.uid);
-                return true;
-            } catch (error) {
-                console.error("スコア保存失敗:", error);
-                return false;
-            }
-        }
-
-        // 自分のベストスコア読み込み
-        function loadMyBestScore(userId) {
-            if (!userId) return;
-
-            const userScoreRef = collection(db, 'artifacts', appId, 'users', userId, 'scores');
-            onSnapshot(userScoreRef, (snapshot) => {
-                let bestScore = null;
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    if (!bestScore || data.score > bestScore.score) {
-                        bestScore = data;
-                    }
-                });
-
-                if (bestScore) {
-                    myBestScoreContainer.innerHTML = `
-                        <div class="text-pink-600 font-pop text-2xl">${bestScore.score} <span class="text-xs font-sans text-gray-500">pt</span></div>
-                        <div class="text-xs text-gray-500 mt-1 font-bold">
-                            タイム: ${bestScore.time}秒 / 手数: ${bestScore.moves}回
-                        </div>
-                    `;
+        function syncUserData(user) {
+            if (!user) return;
+            const userRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'stats');
+            onSnapshot(userRef, (snap) => {
+                if (snap.exists()) {
+                    myData = snap.data();
+                    updateStatsUI();
                 } else {
-                    myBestScoreContainer.innerHTML = `<p class="text-xs text-gray-400 font-bold py-2">まだプレイ記録がありません</p>`;
+                    saveStats(0, 0, 0);
                 }
-            }, (error) => {
-                console.error("スコア読み込みエラー:", error);
-            });
+            }, (err) => console.error(err));
         }
 
-        // 全体ランキング読み込み (複合クエリ回避のためメモリソートを実施)
-        function loadGlobalRanking() {
+        async function saveStats(winsDelta, matchesDelta, ratingChange) {
+            if (!currentUser) return;
+            const newWins = (myData.wins || 0) + winsDelta;
+            const newMatches = (myData.matches || 0) + matchesDelta;
+            const newRating = Math.max(500, (myData.rating || 1000) + ratingChange);
+
+            const data = {
+                uid: currentUser.uid,
+                userName: currentUser.displayName || "ガンマン",
+                userPhoto: currentUser.photoURL || "",
+                wins: newWins,
+                matches: newMatches,
+                rating: newRating,
+                updatedAt: serverTimestamp()
+            };
+
+            const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'stats');
+            const leaderboardRef = doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', currentUser.uid);
+
+            await setDoc(userRef, data, { merge: true });
+            await setDoc(leaderboardRef, data, { merge: true });
+        }
+
+        function updateStatsUI() {
+            const winrate = myData.matches > 0 ? Math.round((myData.wins / myData.matches) * 100) : 0;
+            document.getElementById('my-winrate').textContent = `${winrate}%`;
+            document.getElementById('my-wins').textContent = `${myData.wins || 0}勝`;
+            document.getElementById('my-rating').textContent = `${myData.rating || 1000}`;
+        }
+
+        function loadLeaderboard() {
             const leaderboardRef = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
-            
             onSnapshot(leaderboardRef, (snapshot) => {
                 let list = [];
-                snapshot.forEach(doc => {
-                    list.push(doc.data());
-                });
+                snapshot.forEach(docSnap => list.push(docSnap.data()));
+                list.sort((a, b) => (b.rating || 1000) - (a.rating || 1000));
 
-                // JavaScriptメモリ内でハイスコア順にソート (RULE 2準拠)
-                list.sort((a, b) => (b.score || 0) - (a.score || 0));
-
+                const container = document.getElementById('leaderboard-mini');
                 if (list.length === 0) {
-                    rankingListContainer.innerHTML = `<p class="text-xs text-gray-400 text-center py-4 font-bold">ランキングデータがありません</p>`;
+                    container.innerHTML = `<span class="text-slate-500">データなし</span>`;
                     return;
                 }
 
-                rankingListContainer.innerHTML = list.slice(0, 5).map((item, index) => {
-                    const crownColor = index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-400' : index === 2 ? 'text-amber-600' : 'text-gray-300';
-                    return `
-                        <div class="flex items-center justify-between bg-white p-2.5 rounded-xl border border-amber-100 shadow-sm text-xs font-bold">
-                            <div class="flex items-center gap-2 overflow-hidden">
-                                <span class="font-pop text-sm ${crownColor} w-4 text-center">#${index + 1}</span>
-                                <img src="${item.userPhoto || 'https://placehold.co/50x50?text=U'}" class="w-6 h-6 rounded-full border">
-                                <span class="truncate text-gray-700 max-w-[80px]">${item.userName}</span>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-pink-600 font-pop text-sm">${item.score}</span> <span class="text-[10px] text-gray-400">pt</span>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            }, (error) => {
-                console.error("ランキング読み込みエラー:", error);
-                rankingListContainer.innerHTML = `<p class="text-xs text-red-400 text-center py-4">読み込みエラー</p>`;
-            });
-        }
-
-        // --- 6. ゲームロジック ---
-
-        // 初期化 & ボード構築
-        function initBoard() {
-            // 絵柄をペアにしてシャッフル
-            const deck = [...EMOJIS, ...EMOJIS].sort(() => Math.random() - 0.5);
-            gameBoard.innerHTML = '';
-            gameCards = [];
-
-            deck.forEach((emoji, index) => {
-                const card = document.createElement('div');
-                card.className = 'card card-container h-full w-full';
-                card.dataset.index = index;
-                card.dataset.emoji = emoji;
-
-                card.innerHTML = `
-                    <div class="card-inner">
-                        <div class="card-front">
-                            <i class="fa-solid fa-question text-xl"></i>
-                        </div>
-                        <div class="card-back text-3xl select-none">
-                            ${emoji}
-                        </div>
+                container.innerHTML = list.slice(0, 4).map((item, idx) => `
+                    <div class="flex items-center gap-1.5 bg-slate-900/80 px-2 py-0.5 rounded-lg border border-slate-800 text-[11px] whitespace-nowrap">
+                        <span class="text-amber-400 font-bold">#${idx+1}</span>
+                        <span class="text-slate-300 font-bold truncate max-w-[60px]">${item.userName}</span>
+                        <span class="text-cyan-400 font-cyber font-bold">${item.rating}</span>
                     </div>
-                `;
+                `).join('');
+            }, (err) => console.error(err));
+        }
 
-                card.addEventListener('click', () => handleCardClick(card));
-                gameBoard.appendChild(card);
-                gameCards.push(card);
+        // --- 3D THREE.JS GAME ENGINE ---
+        let scene, camera, renderer;
+        let container = document.getElementById('canvas-container');
+
+        let gameActive = false;
+        let isCountingDown = false;
+        let aiLevel = 'medium';
+
+        const WEAPONS = {
+            assault: { name: 'アサルトライフル', damage: 16, fireRate: 130, maxAmmo: 30, reloadTime: 1200, speed: 1.8, spread: 0.05 },
+            sniper:  { name: 'スナイパー', damage: 75, fireRate: 850, maxAmmo: 5, reloadTime: 1800, speed: 3.0, spread: 0.005 },
+            shotgun: { name: 'ショットガン', damage: 12, fireRate: 600, maxAmmo: 8, reloadTime: 1400, speed: 1.5, spread: 0.22, pellets: 7 }
+        };
+
+        let currentWeaponKey = 'assault';
+
+        // Expanded Map Boundaries
+        const MAP_LIMIT_X = 42;
+        const MAP_LIMIT_Z = 28;
+
+        // Player Objects in 3D Space
+        const p1 = {
+            pos: new THREE.Vector3(-30, 0, 0),
+            hp: 100, maxHp: 100, speed: 0.28,
+            angle: 0, ammo: 30, isReloading: false, lastShot: 0,
+            isDodging: false, dodgeCooldown: 0,
+            mesh: null, targetReticle: null, laserLine: null, aimPoint: new THREE.Vector3()
+        };
+
+        const p2 = {
+            pos: new THREE.Vector3(30, 0, 0),
+            hp: 100, maxHp: 100, speed: 0.22,
+            angle: Math.PI, targetAngle: Math.PI,
+            ammo: 30, isReloading: false, lastShot: 0,
+            weapon: WEAPONS.assault,
+            isDodging: false, dodgeCooldown: 0,
+            mesh: null, laserLine: null
+        };
+
+        let bullets3D = [];
+        let particles3D = [];
+        let covers3D = [];
+        let lightFlashes = [];
+
+        const keys = {};
+        const raycaster = new THREE.Raycaster();
+        const mousePlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+        const mouse3D = new THREE.Vector2();
+
+        function init3DScene() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0f172a); // Stylized Dark Cyber-Sky
+            scene.fog = new THREE.FogExp2(0x0f172a, 0.008);
+
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(0, 48, 42);
+            camera.lookAt(0, 0, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.1;
+            container.appendChild(renderer.domElement);
+
+            // Lighting System
+            const ambientLight = new THREE.AmbientLight(0x94a3b8, 0.8);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0x38bdf8, 1.2);
+            dirLight.position.set(30, 60, 30);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            dirLight.shadow.camera.near = 0.5;
+            dirLight.shadow.camera.far = 150;
+            const d = 50;
+            dirLight.shadow.camera.left = -d; dirLight.shadow.camera.right = d;
+            dirLight.shadow.camera.top = d; dirLight.shadow.camera.bottom = -d;
+            scene.add(dirLight);
+
+            // Warm Rim Light
+            const rimLight = new THREE.DirectionalLight(0xf43f5e, 0.6);
+            rimLight.position.set(-30, 20, -30);
+            scene.add(rimLight);
+
+            // Expanded Ground Grass Terrain
+            const groundGeo = new THREE.PlaneGeometry(100, 70, 32, 32);
+            const groundMat = new THREE.MeshStandardMaterial({ 
+                color: 0x1e293b, 
+                roughness: 0.6,
+                metalness: 0.2
             });
+            const ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+
+            // Cyber Grid Floor Lines
+            const gridHelper = new THREE.GridHelper(100, 40, 0x06b6d4, 0x334155);
+            gridHelper.position.y = 0.02;
+            scene.add(gridHelper);
+
+            // Decorative Glowing Pillars
+            for (let i = 0; i < 8; i++) {
+                const px = (i % 2 === 0 ? 1 : -1) * 46;
+                const pz = ((i % 4) - 1.5) * 18;
+                const pillarGeo = new THREE.CylinderGeometry(0.8, 0.8, 8, 16);
+                const pillarMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, emissive: 0x0284c7, emissiveIntensity: 0.5 });
+                const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+                pillar.position.set(px, 4, pz);
+                scene.add(pillar);
+            }
+
+            // Build Enhanced Character Models
+            p1.mesh = createAdvancedCharacterMesh(0x06b6d4, 0x38bdf8);
+            p2.mesh = createAdvancedCharacterMesh(0xf43f5e, 0xfb7185);
+
+            scene.add(p1.mesh);
+            scene.add(p2.mesh);
+
+            // Create Target Reticle and Aim Laser Line for P1
+            createAimIndicators();
+
+            generate3DStageCovers();
         }
 
-        // カードクリック処理
-        function handleCardClick(card) {
-            if (!isGameStarted || !canFlip) return;
-            if (card.classList.contains('flipped') || card.classList.contains('matched')) return;
+        function createAdvancedCharacterMesh(primaryColor, accentColor) {
+            const group = new THREE.Group();
 
-            card.classList.add('flipped');
-            flippedCards.push(card);
+            // Metallic Body Armor
+            const bodyGeo = new THREE.CylinderGeometry(1.0, 0.8, 1.8, 16);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: primaryColor, metalness: 0.8, roughness: 0.3 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 1.2;
+            body.castShadow = true;
+            group.add(body);
 
-            if (flippedCards.length === 2) {
-                moveCount++;
-                movesDisplay.textContent = moveCount;
-                checkMatch();
+            // Glowing Core Chest Piece
+            const coreGeo = new THREE.SphereGeometry(0.4, 16, 16);
+            const coreMat = new THREE.MeshStandardMaterial({ color: accentColor, emissive: accentColor, emissiveIntensity: 0.9 });
+            const core = new THREE.Mesh(coreGeo, coreMat);
+            core.position.set(0, 1.4, 0.8);
+            group.add(core);
+
+            // Cyber Helmet
+            const headGeo = new THREE.SphereGeometry(0.9, 16, 16);
+            const headMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9, roughness: 0.1 });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 2.4;
+            head.castShadow = true;
+            group.add(head);
+
+            // Visor (Glowing)
+            const visorGeo = new THREE.BoxGeometry(1.1, 0.3, 0.6);
+            const visorMat = new THREE.MeshStandardMaterial({ color: accentColor, emissive: accentColor, emissiveIntensity: 0.8 });
+            const visor = new THREE.Mesh(visorGeo, visorMat);
+            visor.position.set(0, 2.5, 0.5);
+            group.add(visor);
+
+            // Gun Model
+            const gunGroup = new THREE.Group();
+            const barrelGeo = new THREE.CylinderGeometry(0.12, 0.12, 1.8, 12);
+            const gunMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.9, roughness: 0.2 });
+            const barrel = new THREE.Mesh(barrelGeo, gunMat);
+            barrel.rotation.x = Math.PI / 2;
+            barrel.position.set(0, 0, 0.9);
+            gunGroup.add(barrel);
+
+            gunGroup.position.set(0.9, 1.3, 0.5);
+            group.add(gunGroup);
+
+            return group;
+        }
+
+        function createAimIndicators() {
+            // 3D Target Reticle Mesh
+            const ringGeo = new THREE.RingGeometry(0.8, 1.0, 32);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+            p1.targetReticle = new THREE.Mesh(ringGeo, ringMat);
+            p1.targetReticle.rotation.x = Math.PI / 2;
+            p1.targetReticle.position.y = 0.1;
+            scene.add(p1.targetReticle);
+
+            // Laser Pointer Line Material
+            const laserMat = new THREE.LineBasicMaterial({ color: 0xef4444, linewidth: 2 });
+            const laserGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+            p1.laserLine = new THREE.Line(laserGeo, laserMat);
+            scene.add(p1.laserLine);
+        }
+
+        function generate3DStageCovers() {
+            covers3D.forEach(c => scene.remove(c.mesh));
+            covers3D = [];
+
+            const numObjects = 24 + Math.floor(Math.random() * 8);
+
+            // Reinforced Center Concrete Wall
+            const wallGroup = new THREE.Group();
+            const wallGeo = new THREE.BoxGeometry(3, 5, 14);
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.3, roughness: 0.7 });
+            const wall = new THREE.Mesh(wallGeo, wallMat);
+            wall.position.y = 2.5; wall.castShadow = true; wall.receiveShadow = true;
+            wallGroup.add(wall);
+
+            // Glowing Strip on Wall
+            const stripGeo = new THREE.BoxGeometry(3.1, 0.4, 14.1);
+            const stripMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x38bdf8, emissiveIntensity: 0.6 });
+            const strip = new THREE.Mesh(stripGeo, stripMat);
+            strip.position.y = 2.5;
+            wallGroup.add(strip);
+
+            wallGroup.position.set(0, 0, (Math.random() - 0.5) * 16);
+            scene.add(wallGroup);
+            covers3D.push({ mesh: wallGroup, x: wallGroup.position.x, z: wallGroup.position.z, hp: 999, type: 'wall' });
+
+            for (let i = 0; i < numObjects; i++) {
+                const rx = (Math.random() - 0.5) * 68;
+                const rz = (Math.random() - 0.5) * 44;
+
+                if (Math.abs(rx) < 8 && Math.abs(rz) < 8) continue; // Keep spawn area clear
+
+                const randType = Math.random();
+                let mesh, hp, type;
+
+                if (randType < 0.40) {
+                    // Futuristic Metallic Crate
+                    const boxGeo = new THREE.BoxGeometry(2.6, 2.6, 2.6);
+                    const boxMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.6, roughness: 0.4 });
+                    mesh = new THREE.Mesh(boxGeo, boxMat);
+                    mesh.position.set(rx, 1.3, rz);
+                    mesh.castShadow = true; mesh.receiveShadow = true;
+                    scene.add(mesh);
+                    hp = 60; type = 'crate';
+                } else if (randType < 0.75) {
+                    // Energy Barrel
+                    const drumGeo = new THREE.CylinderGeometry(1.2, 1.2, 3.0, 16);
+                    const drumMat = new THREE.MeshStandardMaterial({ color: 0xf43f5e, emissive: 0xbe123c, emissiveIntensity: 0.4 });
+                    mesh = new THREE.Mesh(drumGeo, drumMat);
+                    mesh.position.set(rx, 1.5, rz);
+                    mesh.castShadow = true; mesh.receiveShadow = true;
+                    scene.add(mesh);
+                    hp = 35; type = 'drum';
+                } else {
+                    // Stone Pillar Cover
+                    const pillarGeo = new THREE.BoxGeometry(2.2, 6.0, 2.2);
+                    const pillarMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.8 });
+                    mesh = new THREE.Mesh(pillarGeo, pillarMat);
+                    mesh.position.set(rx, 3.0, rz);
+                    mesh.castShadow = true; mesh.receiveShadow = true;
+                    scene.add(mesh);
+                    hp = 999; type = 'stone';
+                }
+
+                covers3D.push({ mesh, x: rx, z: rz, hp, type });
             }
         }
 
-        // マッチチェック
-        function checkMatch() {
-            canFlip = false;
-            const [card1, card2] = flippedCards;
+        function resetGamePositions() {
+            const weapon = WEAPONS[currentWeaponKey];
+            p1.pos.set(-30, 0, 0); p1.hp = 100; p1.ammo = weapon.maxAmmo; p1.isReloading = false;
+            p2.pos.set(30, 0, 0); p2.hp = 100; p2.ammo = p2.weapon.maxAmmo; p2.isReloading = false;
 
-            if (card1.dataset.emoji === card2.dataset.emoji) {
-                // 一致
-                setTimeout(() => {
-                    card1.classList.add('matched');
-                    card2.classList.add('matched');
-                    matchedCount++;
-                    matchesDisplay.textContent = `${matchedCount} / 6`;
-                    flippedCards = [];
-                    canFlip = true;
+            p1.mesh.position.copy(p1.pos);
+            p2.mesh.position.copy(p2.pos);
 
-                    // 全て揃ったらクリア
-                    if (matchedCount === 6) {
-                        finishGame();
-                    }
-                }, 300);
-            } else {
-                // 不一致（裏に戻す）
-                setTimeout(() => {
-                    card1.classList.remove('flipped');
-                    card2.classList.remove('flipped');
-                    flippedCards = [];
-                    canFlip = true;
-                }, 900);
+            bullets3D.forEach(b => scene.remove(b.mesh));
+            particles3D.forEach(p => scene.remove(p.mesh));
+            bullets3D = []; particles3D = [];
+
+            generate3DStageCovers();
+            updateHPUI();
+            updateAmmoUI();
+        }
+
+        function startMatchSequence() {
+            document.getElementById('start-overlay').classList.add('hidden');
+            resetGamePositions();
+
+            isCountingDown = true;
+            gameActive = false;
+
+            const countdownOverlay = document.getElementById('countdown-overlay');
+            const countdownText = document.getElementById('countdown-text');
+            countdownOverlay.classList.remove('hidden');
+
+            let count = 3;
+            countdownText.textContent = count;
+            playSFX('beep');
+
+            const timer = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    countdownText.textContent = count;
+                    playSFX('beep');
+                } else if (count === 0) {
+                    countdownText.textContent = "FIGHT!";
+                    playSFX('fight');
+                } else {
+                    clearInterval(timer);
+                    countdownOverlay.classList.add('hidden');
+                    isCountingDown = false;
+                    gameActive = true;
+                    document.getElementById('game-status-text').textContent = "3D PRO BATTLE中！";
+                }
+            }, 800);
+        }
+
+        function createMuzzleFlash(pos, colorHex) {
+            const light = new THREE.PointLight(colorHex, 5, 10);
+            light.position.copy(pos);
+            scene.add(light);
+            setTimeout(() => scene.remove(light), 50);
+        }
+
+        function create3DParticles(pos, color, count = 16) {
+            for (let i = 0; i < count; i++) {
+                const pGeo = new THREE.SphereGeometry(0.25, 8, 8);
+                const pMat = new THREE.MeshBasicMaterial({ color: color });
+                const pMesh = new THREE.Mesh(pGeo, pMat);
+                pMesh.position.copy(pos);
+
+                const dir = new THREE.Vector3(
+                    (Math.random() - 0.5) * 1.2,
+                    Math.random() * 0.8 + 0.2,
+                    (Math.random() - 0.5) * 1.2
+                );
+
+                scene.add(pMesh);
+                particles3D.push({ mesh: pMesh, dir, life: 1.0 });
             }
         }
 
-        // ゲーム開始
-        function startGame() {
-            // タイマーリセット
-            clearInterval(timerInterval);
-            secondsElapsed = 0;
-            moveCount = 0;
-            matchedCount = 0;
-            flippedCards = [];
-            canFlip = true;
-            isGameStarted = true;
+        function shoot3DBullet(shooter, isP1) {
+            if (!gameActive) return;
+            const now = Date.now();
+            const weapon = isP1 ? WEAPONS[currentWeaponKey] : shooter.weapon;
 
-            timerDisplay.textContent = '0s';
-            movesDisplay.textContent = '0';
-            matchesDisplay.textContent = '0 / 6';
+            if (shooter.isReloading || shooter.ammo <= 0) {
+                if (!shooter.isReloading && shooter.ammo <= 0) reloadWeapon(shooter, isP1);
+                return;
+            }
 
-            initBoard();
+            if (now - shooter.lastShot < weapon.fireRate) return;
 
-            // タイマー起動
-            timerInterval = setInterval(() => {
-                secondsElapsed++;
-                timerDisplay.textContent = `${secondsElapsed}s`;
-            }, 1000);
+            shooter.lastShot = now;
+            shooter.ammo--;
 
-            startBtn.innerHTML = `<i class="fa-solid fa-rotate-right"></i> やり直す`;
-            startBtn.className = startBtn.className.replace('from-emerald-400 to-teal-500', 'from-amber-400 to-orange-500');
-        }
+            if (isP1) updateAmmoUI();
 
-        // ゲーム終了（クリア）
-        async function finishGame() {
-            clearInterval(timerInterval);
-            isGameStarted = false;
+            playSFX(isP1 && currentWeaponKey === 'sniper' ? 'sniper' : 'shoot');
 
-            // スコア計算: (基点1000点) - (時間 x 10) - (手数 x 20) ※最低100点保証
-            const calculatedScore = Math.max(100, 1000 - (secondsElapsed * 10) - (moveCount * 20));
+            const muzzlePos = shooter.pos.clone().add(new THREE.Vector3(Math.cos(shooter.angle) * 2.0, 1.4, Math.sin(shooter.angle) * 2.0));
+            createMuzzleFlash(muzzlePos, isP1 ? 0x22d3ee : 0xf43f5e);
 
-            modalTime.textContent = `${secondsElapsed}秒`;
-            modalMoves.textContent = `${moveCount}回`;
-            modalScore.textContent = `${calculatedScore} pt`;
+            const pellets = weapon.pellets || 1;
+            for (let i = 0; i < pellets; i++) {
+                const spreadAngle = shooter.angle + (Math.random() - 0.5) * weapon.spread;
+                
+                const bGeo = new THREE.SphereGeometry(0.4, 8, 8);
+                const bMat = new THREE.MeshBasicMaterial({ color: isP1 ? 0x38bdf8 : 0xfb7185 });
+                const bMesh = new THREE.Mesh(bGeo, bMat);
 
-            if (currentUser) {
-                saveStatusMsg.textContent = "クラウドにスコアを保存中...";
-                const success = await saveScore({
-                    score: calculatedScore,
-                    time: secondsElapsed,
-                    moves: moveCount
+                bMesh.position.copy(muzzlePos);
+                scene.add(bMesh);
+
+                bullets3D.push({
+                    mesh: bMesh,
+                    dir: new THREE.Vector3(Math.cos(spreadAngle), 0, Math.sin(spreadAngle)).multiplyScalar(weapon.speed),
+                    damage: weapon.damage,
+                    isP1: isP1
                 });
-                saveStatusMsg.textContent = success ? "✅ クラウドにスコアを保存しました！" : "⚠️ スコア保存に失敗しました。";
-            } else {
-                saveStatusMsg.textContent = "💡 ログインするとランキングに登録されます！";
             }
-
-            clearModal.classList.remove('hidden');
         }
 
-        // --- 7. イベントリスナー ---
-        startBtn.addEventListener('click', startGame);
+        function reloadWeapon(shooter, isP1) {
+            if (shooter.isReloading) return;
+            const weapon = isP1 ? WEAPONS[currentWeaponKey] : shooter.weapon;
+            shooter.isReloading = true;
 
-        modalCloseBtn.addEventListener('click', () => {
-            clearModal.classList.add('hidden');
-            startGame();
+            if (isP1) {
+                document.getElementById('reload-indicator').classList.remove('hidden');
+                playSFX('reload');
+            }
+
+            setTimeout(() => {
+                shooter.ammo = weapon.maxAmmo;
+                shooter.isReloading = false;
+                if (isP1) {
+                    document.getElementById('reload-indicator').classList.add('hidden');
+                    updateAmmoUI();
+                }
+            }, weapon.reloadTime);
+        }
+
+        function dodgeRoll(shooter) {
+            if (!gameActive || shooter.isDodging) return;
+            shooter.isDodging = true;
+
+            const rollDir = new THREE.Vector3(Math.cos(shooter.angle) * 6, 0, Math.sin(shooter.angle) * 6);
+            shooter.pos.add(rollDir);
+
+            setTimeout(() => { shooter.isDodging = false; }, 350);
+        }
+
+        function update3DBotAI() {
+            if (!gameActive || p2.hp <= 0) return;
+
+            aiLevel = document.getElementById('ai-level-select').value;
+
+            const dx = p1.pos.x - p2.pos.x;
+            const dz = p1.pos.z - p2.pos.z;
+            const dist = Math.hypot(dx, dz);
+
+            const exactAngle = Math.atan2(dz, dx);
+
+            let aimError = aiLevel === 'easy' ? 0.30 : aiLevel === 'medium' ? 0.12 : 0.02;
+            let shootChance = aiLevel === 'easy' ? 0.05 : aiLevel === 'medium' ? 0.10 : 0.22;
+
+            p2.angle = exactAngle + (Math.random() - 0.5) * aimError;
+
+            let speed = p2.speed;
+            const moveVec = new THREE.Vector3(Math.cos(exactAngle) * speed, 0, Math.sin(exactAngle) * speed);
+
+            let blocked = false;
+            covers3D.forEach(c => {
+                if (Math.hypot(p2.pos.x + moveVec.x - c.mesh.position.x, p2.pos.z + moveVec.z - c.mesh.position.z) < 2.8) {
+                    blocked = true;
+                }
+            });
+
+            if (blocked) {
+                p2.pos.x += Math.sin(exactAngle) * speed;
+                p2.pos.z -= Math.cos(exactAngle) * speed;
+            } else {
+                if (dist > 18) {
+                    p2.pos.add(moveVec);
+                } else if (dist < 10) {
+                    p2.pos.sub(moveVec);
+                }
+            }
+
+            p2.pos.x = Math.max(-MAP_LIMIT_X, Math.min(MAP_LIMIT_X, p2.pos.x));
+            p2.pos.z = Math.max(-MAP_LIMIT_Z, Math.min(MAP_LIMIT_Z, p2.pos.z));
+
+            if (p2.ammo <= 0) reloadWeapon(p2, false);
+
+            if (dist < 40 && Math.random() < shootChance) {
+                shoot3DBullet(p2, false);
+            }
+        }
+
+        function update3DPhysics() {
+            if (!gameActive) return;
+
+            // Player 1 Keyboard Controls
+            const moveDir = new THREE.Vector3();
+            if (keys['KeyW'] || keys['ArrowUp']) moveDir.z -= 1;
+            if (keys['KeyS'] || keys['ArrowDown']) moveDir.z += 1;
+            if (keys['KeyA'] || keys['ArrowLeft']) moveDir.x -= 1;
+            if (keys['KeyD'] || keys['ArrowRight']) moveDir.x += 1;
+
+            if (moveDir.lengthSq() > 0) {
+                moveDir.normalize().multiplyScalar(p1.speed);
+                p1.pos.add(moveDir);
+            }
+
+            p1.pos.x = Math.max(-MAP_LIMIT_X, Math.min(MAP_LIMIT_X, p1.pos.x));
+            p1.pos.z = Math.max(-MAP_LIMIT_Z, Math.min(MAP_LIMIT_Z, p1.pos.z));
+
+            // Collision with covers
+            covers3D.forEach(c => {
+                if (Math.hypot(p1.pos.x - c.mesh.position.x, p1.pos.z - c.mesh.position.z) < 2.5) {
+                    p1.pos.sub(moveDir);
+                }
+            });
+
+            update3DBotAI();
+
+            // Sync Character Meshes Position & Rotation
+            p1.mesh.position.copy(p1.pos);
+            p1.mesh.rotation.y = -p1.angle + Math.PI / 2;
+
+            p2.mesh.position.copy(p2.pos);
+            p2.mesh.rotation.y = -p2.angle + Math.PI / 2;
+
+            // Update Target Reticle & Laser Pointer Position
+            p1.targetReticle.position.set(p1.aimPoint.x, 0.1, p1.aimPoint.z);
+            
+            const startLaser = p1.pos.clone().add(new THREE.Vector3(0, 1.4, 0));
+            const laserPositions = new Float32Array([
+                startLaser.x, startLaser.y, startLaser.z,
+                p1.aimPoint.x, 0.2, p1.aimPoint.z
+            ]);
+            p1.laserLine.geometry.setAttribute('position', new THREE.BufferAttribute(laserPositions, 3));
+            p1.laserLine.geometry.attributes.position.needsUpdate = true;
+
+            // Bullets Physics & Collision
+            for (let i = bullets3D.length - 1; i >= 0; i--) {
+                const b = bullets3D[i];
+                b.mesh.position.add(b.dir);
+
+                // Out of bounds check
+                if (Math.abs(b.mesh.position.x) > MAP_LIMIT_X + 5 || Math.abs(b.mesh.position.z) > MAP_LIMIT_Z + 5) {
+                    scene.remove(b.mesh);
+                    bullets3D.splice(i, 1);
+                    continue;
+                }
+
+                // Hit Stage Covers
+                let hitCover = false;
+                for (let j = covers3D.length - 1; j >= 0; j--) {
+                    const c = covers3D[j];
+                    if (Math.hypot(b.mesh.position.x - c.mesh.position.x, b.mesh.position.z - c.mesh.position.z) < 2.2) {
+                        create3DParticles(b.mesh.position, c.type === 'drum' ? 0xf43f5e : 0x0284c7, 10);
+
+                        if (c.hp < 999) {
+                            c.hp -= b.damage;
+                            if (c.hp <= 0) {
+                                if (c.type === 'drum') {
+                                    create3DParticles(c.mesh.position, 0xf97316, 30);
+                                    playSFX('sniper');
+                                    [p1, p2].forEach(p => {
+                                        if (p.pos.distanceTo(c.mesh.position) < 10) {
+                                            p.hp -= 45;
+                                        }
+                                    });
+                                    updateHPUI();
+                                    checkMatchEnd();
+                                }
+                                scene.remove(c.mesh);
+                                covers3D.splice(j, 1);
+                            }
+                        }
+
+                        scene.remove(b.mesh);
+                        bullets3D.splice(i, 1);
+                        hitCover = true;
+                        break;
+                    }
+                }
+                if (hitCover) continue;
+
+                // Hit Player 1
+                if (!b.isP1 && b.mesh.position.distanceTo(p1.pos) < 1.8) {
+                    p1.hp -= b.damage;
+                    create3DParticles(p1.pos, 0x06b6d4, 16);
+                    playSFX('hit');
+                    updateHPUI();
+                    checkMatchEnd();
+                    scene.remove(b.mesh);
+                    bullets3D.splice(i, 1);
+                    continue;
+                }
+
+                // Hit Player 2
+                if (b.isP1 && b.mesh.position.distanceTo(p2.pos) < 1.8) {
+                    p2.hp -= b.damage;
+                    create3DParticles(p2.pos, 0xf43f5e, 16);
+                    playSFX('hit');
+                    updateHPUI();
+                    checkMatchEnd();
+                    scene.remove(b.mesh);
+                    bullets3D.splice(i, 1);
+                    continue;
+                }
+            }
+
+            // Particles animation
+            for (let i = particles3D.length - 1; i >= 0; i--) {
+                const pt = particles3D[i];
+                pt.mesh.position.add(pt.dir);
+                pt.life -= 0.04;
+                if (pt.life <= 0) {
+                    scene.remove(pt.mesh);
+                    particles3D.splice(i, 1);
+                }
+            }
+        }
+
+        function updateHPUI() {
+            document.getElementById('p1-hp-bar').style.width = `${Math.max(0, p1.hp)}%`;
+            document.getElementById('p2-hp-bar').style.width = `${Math.max(0, p2.hp)}%`;
+        }
+
+        function updateAmmoUI() {
+            const weapon = WEAPONS[currentWeaponKey];
+            document.getElementById('ammo-count').textContent = `${p1.ammo} / ${weapon.maxAmmo}`;
+        }
+
+        function checkMatchEnd() {
+            if (p1.hp <= 0 || p2.hp <= 0) {
+                gameActive = false;
+                const p1Won = p2.hp <= 0;
+
+                const ratingChange = p1Won ? 25 : -15;
+                if (currentUser) saveStats(p1Won ? 1 : 0, 1, ratingChange);
+
+                showResultModal(p1Won, ratingChange);
+            }
+        }
+
+        function showResultModal(p1Won, ratingChange) {
+            const modal = document.getElementById('result-modal');
+            document.getElementById('modal-title').textContent = p1Won ? "VICTORY! 🎉" : "DEFEAT... 😭";
+            document.getElementById('modal-desc').textContent = p1Won ? "精確なエイム！見事に勝利したよ！" : "惜しい！レーザー照準を活用してリベンジだ！";
+            document.getElementById('modal-opponent').textContent = `BOT AI (${document.getElementById('ai-level-select').value})`;
+            document.getElementById('modal-rating-change').textContent = `${ratingChange >= 0 ? '+' : ''}${ratingChange} pt`;
+
+            modal.classList.remove('hidden');
+        }
+
+        window.addEventListener('keydown', e => {
+            keys[e.code] = true;
+            if (e.code === 'KeyR') reloadWeapon(p1, true);
+            if (e.code === 'Space') dodgeRoll(p1);
+        });
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        container.addEventListener('mousemove', e => {
+            const rect = container.getBoundingClientRect();
+            mouse3D.x = ((e.clientX - rect.left) / container.clientWidth) * 2 - 1;
+            mouse3D.y = -((e.clientY - rect.top) / container.clientHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse3D, camera);
+            raycaster.ray.intersectPlane(mousePlane, p1.aimPoint);
+
+            p1.angle = Math.atan2(p1.aimPoint.z - p1.pos.z, p1.aimPoint.x - p1.pos.x);
         });
 
-        // 起動処理
-        initBoard();
-        loadGlobalRanking();
+        container.addEventListener('mousedown', () => shoot3DBullet(p1, true));
 
+        document.querySelectorAll('.weapon-select-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.weapon-select-btn').forEach(b => {
+                    b.className = 'weapon-select-btn bg-slate-950/80 border border-slate-800 rounded-2xl p-3 text-center transition hover:bg-slate-800 hover:scale-105';
+                });
+                const target = e.currentTarget;
+                target.className = 'weapon-select-btn bg-cyan-500/20 border-2 border-cyan-400 rounded-2xl p-3 text-center transition hover:scale-105';
+                currentWeaponKey = target.dataset.weapon;
+                updateAmmoUI();
+            });
+        });
+
+        document.getElementById('reload-btn').addEventListener('click', () => reloadWeapon(p1, true));
+        document.getElementById('dodge-btn').addEventListener('click', () => dodgeRoll(p1));
+
+        document.getElementById('start-btn').addEventListener('click', () => {
+            startMatchSequence();
+        });
+
+        document.getElementById('modal-retry-btn').addEventListener('click', () => {
+            document.getElementById('result-modal').classList.add('hidden');
+            startMatchSequence();
+        });
+
+        document.getElementById('sound-btn').addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            document.getElementById('sound-icon').className = soundEnabled ? 'fa-solid fa-volume-high text-cyan-400' : 'fa-solid fa-volume-xmark text-slate-500';
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            update3DPhysics();
+            if (renderer && scene && camera) {
+                renderer.render(scene, camera);
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            if (container && renderer && camera) {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            }
+        });
+
+        window.onload = function() {
+            init3DScene();
+            loadLeaderboard();
+            animate();
+        };
     </script>
 </body>
 </html>
